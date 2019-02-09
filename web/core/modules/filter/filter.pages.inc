@@ -385,6 +385,8 @@ function filter_format_editor_link_form($form, &$form_state, $format) {
     'file_extensions' => 'txt',
     'directory' => 'inline-files',
     'data-file-id' => NULL,
+    'status' => 0,
+    'scheme' => 'public',
   );
 
   $max_filesize = !empty($upload_settings['max_size']) ? min(parse_size($upload_settings['max_size']), file_upload_max_size()) : file_upload_max_size();
@@ -437,6 +439,15 @@ function filter_format_editor_link_form($form, &$form_state, $format) {
     '#default_value' => isset($values['target']) ? $values['target'] : FALSE,
     '#parents' => array('attributes', 'target'),
   );
+
+  $form['class'] = array(
+    '#title' => t('CSS classes'),
+    '#description' => t('Separate each additional CSS class with a space.'),
+    '#type' => 'textfield',
+    '#default_value' => isset($values['class']) ? $values['class'] : '',
+    '#parents' => array('attributes', 'class'),
+  );
+
   $form['actions']['#type'] = 'actions';
   $form['actions']['submit'] = array(
     '#type' => 'submit',
@@ -448,6 +459,20 @@ function filter_format_editor_link_form($form, &$form_state, $format) {
   );
 
   return $form;
+}
+
+/**
+ * Validate handler for filter_format_editor_link_form().
+ */
+function filter_format_editor_link_form_validate($form, &$form_state) {
+  if (isset($form_state['values']['attributes']['class'])) {
+    $classes = explode(' ', $form_state['values']['attributes']['class']);
+    $clean_classes = array();
+    foreach ($classes as $class_name) {
+      $clean_classes[] = backdrop_clean_css_identifier($class_name, array());
+    }
+    $form_state['values']['attributes']['class'] = implode(' ', $clean_classes);
+  }
 }
 
 /**
@@ -554,22 +579,26 @@ function _filter_format_editor_link_url_validate(&$element, &$form_state) {
 
 /**
  * Find a managed file ID from a url.
- *
  */
 function _filter_get_file_id($href) {
+  $result = 0;
+
   // Extract file name and directory from $href.
   $pos = strrpos($href, "/");
   $filename = substr($href,$pos + 1);
-  // Now find this file name in uri field to get fid.
-  $results = db_select('file_managed')
-    ->fields('file_managed', array('fid', 'uri'))
-    ->condition('uri', '%' . $filename, 'LIKE')
-    ->orderBy('fid', 'DESC')
-    ->execute();
 
-  $result = 0;
-  foreach ($results as $found) {
-    $result = $found->fid;
+  // Now find this file name in uri field to get fid.
+  if (!empty($filename)) {
+    $results = db_select('file_managed')
+      ->fields('file_managed', array('fid', 'uri'))
+      ->condition('uri', '%' . $filename, 'LIKE')
+      ->orderBy('fid', 'DESC')
+      ->execute();
+
+    foreach ($results as $found) {
+      $result = $found->fid;
+    }
   }
+
   return $result;
 }
