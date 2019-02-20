@@ -1,4 +1,8 @@
 <?php
+/**
+ * @file
+ * Platform.sh Backdrop CMS configuration file.
+ */
 
 // Configure relationships.
 if (isset($_ENV['PLATFORM_RELATIONSHIPS'])) {
